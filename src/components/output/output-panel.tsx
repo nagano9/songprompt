@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { BookmarkPlus, Check } from "lucide-react";
+import { BookmarkPlus, Check, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PLATFORMS, VARIANTS } from "@/lib/prompt/platforms";
+import { PLATFORM_LABELS, profileAgeDays, profilesFor, STALE_AFTER_DAYS, VARIANTS, type PlatformProfile } from "@/lib/prompt/platforms";
 import type { GeneratedPrompt, Platform, PromptField, Variant } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useBuilderStore } from "@/store/builder-store";
+import { useSettingsStore } from "@/store/settings-store";
 import { CopyButton } from "./copy-button";
 
 function FieldPreview({ field, onCopied }: { field: PromptField; onCopied: () => void }) {
@@ -40,7 +41,41 @@ function FieldPreview({ field, onCopied }: { field: PromptField; onCopied: () =>
   );
 }
 
-export function OutputPanel({ output, onSave }: { output: GeneratedPrompt; onSave: () => boolean }) {
+function ProfilePicker({ platform, profile }: { platform: Platform; profile: PlatformProfile }) {
+  const setProfile = useSettingsStore((s) => s.setProfile);
+  const options = profilesFor(platform);
+  const age = profileAgeDays(profile);
+  const stale = age === null || age > STALE_AFTER_DAYS;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      {options.length > 1 ? (
+        <select
+          value={profile.id}
+          onChange={(e) => setProfile(platform, e.target.value)}
+          className="h-7 rounded-md border border-input bg-card px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Versi model"
+        >
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <span className="font-medium">{profile.label}</span>
+      )}
+      <span
+        className={cn("inline-flex items-center gap-1", stale ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground")}
+        title={profile.source}
+      >
+        {stale ? <ShieldAlert className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+        {age === null ? "batas belum diverifikasi" : `diverifikasi ${profile.verifiedAt}${stale ? " — mungkin usang" : ""}`}
+      </span>
+    </div>
+  );
+}
+
+export function OutputPanel({ output, onSave, profile }: { output: GeneratedPrompt; onSave: () => unknown; profile: PlatformProfile }) {
   const platform = useBuilderStore((s) => s.platform);
   const variant = useBuilderStore((s) => s.variant);
   const setPlatform = useBuilderStore((s) => s.setPlatform);
@@ -58,14 +93,15 @@ export function OutputPanel({ output, onSave }: { output: GeneratedPrompt; onSav
     <div className="space-y-3">
       <Tabs value={platform} onValueChange={(v) => setPlatform(v as Platform)}>
         <TabsList className="grid w-full grid-cols-3">
-          {Object.values(PLATFORMS).map((p) => (
-            <TabsTrigger key={p.id} value={p.id}>
-              {p.label}
+          {(Object.keys(PLATFORM_LABELS) as Platform[]).map((id) => (
+            <TabsTrigger key={id} value={id}>
+              {PLATFORM_LABELS[id].label}
             </TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
-      <p className="text-xs text-muted-foreground">{PLATFORMS[platform].description}</p>
+      <p className="text-xs text-muted-foreground">{PLATFORM_LABELS[platform].description}</p>
+      <ProfilePicker platform={platform} profile={profile} />
 
       <div className="flex rounded-lg border p-0.5" role="radiogroup" aria-label="Variasi prompt">
         {(Object.keys(VARIANTS) as Variant[]).map((v) => (

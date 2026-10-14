@@ -6,12 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CHIP_SUGGESTIONS } from "@/lib/prompt/defaults";
-import { autoNegatives } from "@/lib/prompt/negatives";
-import { findLyricCliches } from "@/lib/prompt/suggestions";
+import { planNegatives } from "@/lib/prompt/negatives";
 import type { VocalType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useBuilderStore } from "@/store/builder-store";
 import { Field, SectionCard } from "./form-primitives";
+import { GlossaryHint } from "./glossary-hint";
+import { LyricWorkshop } from "./lyric-workshop";
+import { ReferenceTranslator } from "./reference-translator";
 import { StructureEditor } from "./structure-editor";
 import { TagInput } from "./tag-input";
 
@@ -31,14 +33,15 @@ export function PromptForm() {
   const setProduction = useBuilderStore((s) => s.setProduction);
 
   const instrumental = input.vocal.type === "instrumental";
-  const autoNeg = autoNegatives(input);
-  const cliches = findLyricCliches(input.lyrics);
+  const negPlan = planNegatives(input);
+  const autoSent = negPlan.sent.slice(negPlan.user.length);
 
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
         Tulis deskriptor dalam <strong className="font-medium text-foreground">bahasa Inggris</strong> — generator paling
-        akurat membacanya. Lirik boleh bahasa apa pun.
+        akurat membacanya — istilah Indonesia yang dikenal (mis. “suara serak”, “mendayu”) bisa diterjemahkan sekali klik. Lirik boleh
+        bahasa apa pun.
       </p>
 
       {/* 1. Genre */}
@@ -62,6 +65,7 @@ export function PromptForm() {
             id="subgenres"
             value={input.subgenres}
             onChange={(v) => setField("subgenres", v)}
+            translate
             placeholder="ketik lalu Enter, mis. chamber folk"
           />
         </Field>
@@ -74,6 +78,7 @@ export function PromptForm() {
             id="moods"
             value={input.moods}
             onChange={(v) => setField("moods", v)}
+            translate
             placeholder="mis. bittersweet resignation"
             suggestions={CHIP_SUGGESTIONS.moods.slice(0, 5)}
           />
@@ -85,6 +90,7 @@ export function PromptForm() {
             onChange={(e) => setField("emotionalArc", e.target.value)}
             placeholder="mis. starts hushed, swells in the final chorus, ends near-silent"
           />
+          <GlossaryHint value={input.emotionalArc} onApply={(v) => setField("emotionalArc", v)} />
         </Field>
       </SectionCard>
 
@@ -113,6 +119,7 @@ export function PromptForm() {
               onChange={(e) => setField("tempoFeel", e.target.value)}
               placeholder="mis. lazy behind-the-beat swing"
             />
+            <GlossaryHint value={input.tempoFeel} onApply={(v) => setField("tempoFeel", v)} />
           </Field>
         </div>
         <Field label="Kunci / mode" htmlFor="key">
@@ -141,6 +148,7 @@ export function PromptForm() {
             id="inst-in"
             value={input.instrumentsInclude}
             onChange={(v) => setField("instrumentsInclude", v)}
+            translate
             placeholder="mis. fingerpicked nylon-string guitar"
             suggestions={CHIP_SUGGESTIONS.instruments.slice(0, 6)}
           />
@@ -151,6 +159,7 @@ export function PromptForm() {
             tone="negative"
             value={input.instrumentsAvoid}
             onChange={(v) => setField("instrumentsAvoid", v)}
+            translate
             placeholder="mis. synth pads, 808"
           />
         </Field>
@@ -187,6 +196,7 @@ export function PromptForm() {
                 onChange={(e) => setVocal({ timbre: e.target.value })}
                 placeholder="mis. breathy alto with a slight rasp"
               />
+              <GlossaryHint value={input.vocal.timbre} onApply={(v) => setVocal({ timbre: v })} />
             </Field>
             <Field label="Delivery" htmlFor="delivery">
               <Input
@@ -195,6 +205,7 @@ export function PromptForm() {
                 onChange={(e) => setVocal({ delivery: e.target.value })}
                 placeholder="mis. almost spoken in verses"
               />
+              <GlossaryHint value={input.vocal.delivery} onApply={(v) => setVocal({ delivery: v })} />
             </Field>
             <Field label="Aksen" htmlFor="accent">
               <Input
@@ -203,6 +214,7 @@ export function PromptForm() {
                 onChange={(e) => setVocal({ accent: e.target.value })}
                 placeholder="mis. Javanese"
               />
+              <GlossaryHint value={input.vocal.accent} onApply={(v) => setVocal({ accent: v.replace(/ accent$/i, "") })} />
             </Field>
             <Field label="Bahasa" htmlFor="language">
               <Input
@@ -226,6 +238,7 @@ export function PromptForm() {
               onChange={(e) => setProduction({ era: e.target.value })}
               placeholder="mis. late-1970s analog studio"
             />
+            <GlossaryHint value={input.production.era} onApply={(v) => setProduction({ era: v })} />
           </Field>
           <Field label="Gaya mix" htmlFor="mix">
             <Input
@@ -234,6 +247,7 @@ export function PromptForm() {
               onChange={(e) => setProduction({ mixStyle: e.target.value })}
               placeholder="mis. dry, close-miked, minimal compression"
             />
+            <GlossaryHint value={input.production.mixStyle} onApply={(v) => setProduction({ mixStyle: v })} />
           </Field>
           <Field label="Tekstur" htmlFor="texture">
             <Input
@@ -242,6 +256,7 @@ export function PromptForm() {
               onChange={(e) => setProduction({ texture: e.target.value })}
               placeholder="mis. tape hiss, fret squeaks left in"
             />
+            <GlossaryHint value={input.production.texture} onApply={(v) => setProduction({ texture: v })} />
           </Field>
           <Field label="Ruang" htmlFor="space">
             <Input
@@ -250,6 +265,7 @@ export function PromptForm() {
               onChange={(e) => setProduction({ space: e.target.value })}
               placeholder="mis. small wooden room"
             />
+            <GlossaryHint value={input.production.space} onApply={(v) => setProduction({ space: v })} />
           </Field>
         </div>
       </SectionCard>
@@ -287,18 +303,43 @@ export function PromptForm() {
           </div>
         </div>
 
-        {autoNeg.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-muted-foreground">Negatif otomatis ({autoNeg.length})</p>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="neg-budget">Budget negatif</Label>
+            <div className="flex items-center gap-2">
+              <input
+                id="neg-budget"
+                type="range"
+                min={0}
+                max={25}
+                value={input.negativeBudget}
+                onChange={(e) => setField("negativeBudget", Number(e.target.value))}
+                className="w-32 accent-[var(--accent-strong)]"
+              />
+              <span className="w-16 text-right font-mono text-xs tabular-nums">
+                {input.negativeBudget === 0 ? "tanpa batas" : `${negPlan.sent.length}/${input.negativeBudget}`}
+              </span>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Daftar exclusion yang panjang melemahkan tiap item. Negatif yang kamu tulis sendiri selalu dikirim; sisa budget diisi negatif
+            otomatis berprioritas tertinggi.
+          </p>
+          {(autoSent.length > 0 || negPlan.dropped.length > 0) && (
             <div className="flex flex-wrap gap-1">
-              {autoNeg.map((n) => (
+              {autoSent.map((n) => (
                 <span key={n} className="rounded bg-destructive/8 px-1.5 py-0.5 text-[11px] text-destructive/90">
                   {n}
                 </span>
               ))}
+              {negPlan.dropped.map((n) => (
+                <span key={n} className="rounded border border-dashed px-1.5 py-0.5 text-[11px] text-muted-foreground/70 line-through" title="Dipangkas oleh budget">
+                  {n}
+                </span>
+              ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <Field label="Negatif tambahan (manual)" htmlFor="neg-manual">
           <TagInput
@@ -339,13 +380,9 @@ export function PromptForm() {
               className="font-mono text-[13px] leading-relaxed"
               placeholder={"Bait pertama…\n\nChorus…\n\nBait kedua…"}
             />
-            {cliches.length > 0 && (
-              <p className="text-xs text-destructive">
-                Klise terdeteksi: {cliches.map((c) => `“${c}”`).join(", ")}
-              </p>
-            )}
           </Field>
         )}
+        {!instrumental && <LyricWorkshop />}
       </SectionCard>
 
       {/* 10. References */}
@@ -353,16 +390,17 @@ export function PromptForm() {
         <Field
           label="Referensi"
           htmlFor="references"
-          hint="Hanya dikirim di format Generic. Suno/Udio menolak nama artis — terjemahkan jadi deskriptor di bagian Produksi."
+          hint="Tulis nama artis atau skena. Untuk Suno/Udio, referensi diterjemahkan jadi deskriptor; teks aslinya hanya dikirim di format Generic."
         >
           <Textarea
             id="references"
             value={input.references}
             onChange={(e) => setField("references", e.target.value)}
             rows={2}
-            placeholder="mis. intimate 2000s singer-songwriter records, room mics, no click track"
+            placeholder="mis. mirip Iwan Fals dengan sentuhan Portishead"
           />
         </Field>
+        <ReferenceTranslator />
       </SectionCard>
     </div>
   );

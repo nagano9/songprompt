@@ -1,4 +1,5 @@
 import type { PromptInput, SectionName, SongSection } from "@/lib/types";
+import { DEFAULT_NEGATIVE_BUDGET } from "./negatives";
 
 /** Build a structure from section names. Ids are deterministic so SSR and client markup match. */
 export function makeStructure(
@@ -55,6 +56,7 @@ export const DEFAULT_INPUT: PromptInput = {
   negativesManual: [],
   useDefaultNegatives: true,
   strongAntiSlop: true,
+  negativeBudget: DEFAULT_NEGATIVE_BUDGET,
   theme: "",
   lyrics: "",
   references: "",

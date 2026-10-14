@@ -9,7 +9,7 @@ import {
 } from "@/lib/types";
 import { capitalize, clean, uniq } from "@/lib/utils";
 import { ANTI_SLOP_POSITIVES, resolveNegatives } from "./negatives";
-import { PLATFORMS } from "./platforms";
+import { resolveProfile, type PlatformProfile } from "./platforms";
 
 /* ------------------------------------------------------------------ */
 /* Building blocks                                                      */
@@ -88,13 +88,14 @@ function hasSectionTags(lyrics: string): boolean {
  *   Suno tends to *sing* parenthesised text as backing vocals.
  */
 export function buildLyrics(input: PromptInput, variant: Variant): string {
-  const lyrics = input.lyrics.trim();
+  const instrumental = isInstrumental(input);
+  // An instrumental track ignores any lyrics left in the form (e.g. after switching vocal type).
+  const lyrics = instrumental ? "" : input.lyrics.trim();
   if (lyrics && hasSectionTags(lyrics)) return lyrics;
 
   const withNotes = variant !== "compact";
   const labels = sectionLabels(input.structure);
   const blocks = lyrics ? lyrics.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean) : [];
-  const instrumental = isInstrumental(input);
   const chorusMemory = new Map<string, string>();
 
   let cursor = 0;
@@ -210,8 +211,8 @@ function lyricsHint(input: PromptInput): string | undefined {
   return "Paragraf lirik dibagikan otomatis ke section (dipisah baris kosong).";
 }
 
-function renderSuno(input: PromptInput, variant: Variant): PromptField[] {
-  const limits = PLATFORMS.suno.limits;
+function renderSuno(input: PromptInput, variant: Variant, profile: PlatformProfile): PromptField[] {
+  const limits = profile.limits;
   const style = variant === "detailed" ? sentenceDescriptors(input, false) : tagDescriptors(input, variant).join(", ");
   const negatives = resolveNegatives(input);
   return [
@@ -227,7 +228,9 @@ function renderSuno(input: PromptInput, variant: Variant): PromptField[] {
       label: "Exclude Styles",
       content: negatives.join(", "),
       limit: limits.exclude,
-      hint: "Tempel di kolom Exclude Styles (More Options) pada Custom Mode.",
+      hint: profile.hasExcludeField
+        ? "Tempel di kolom Exclude Styles (More Options) pada Custom Mode."
+        : "Versi ini tidak punya kolom Exclude. Jangan tempel ke Style — pakai sebagai checklist saat memilih hasil.",
     },
     {
       key: "lyrics",
@@ -239,18 +242,24 @@ function renderSuno(input: PromptInput, variant: Variant): PromptField[] {
   ];
 }
 
-function renderUdio(input: PromptInput, variant: Variant): PromptField[] {
+function renderUdio(input: PromptInput, variant: Variant, profile: PlatformProfile): PromptField[] {
   const prompt = variant === "detailed" ? sentenceDescriptors(input, false) : tagDescriptors(input, variant).join(", ");
   const negatives = resolveNegatives(input);
   return [
-    { key: "prompt", label: "Prompt", content: prompt, hint: "Tag paling penting ada di depan." },
+    { key: "prompt", label: "Prompt", content: prompt, limit: profile.limits.prompt, hint: "Tag paling penting ada di depan." },
     {
       key: "avoid",
       label: "Avoid / Negative",
       content: negatives.join(", "),
       hint: "Tempel di kolom negatif jika tersedia di versi Udio kamu. Jangan ditempel ke prompt utama.",
     },
-    { key: "lyrics", label: "Lyrics", content: buildLyrics(input, variant), hint: lyricsHint(input) },
+    {
+      key: "lyrics",
+      label: "Lyrics",
+      content: buildLyrics(input, variant),
+      limit: profile.limits.lyrics,
+      hint: lyricsHint(input),
+    },
   ];
 }
 
@@ -302,12 +311,17 @@ function renderGeneric(input: PromptInput, variant: Variant): PromptField[] {
 /* Public API                                                           */
 /* ------------------------------------------------------------------ */
 
-export function generatePrompt(input: PromptInput, platform: Platform, variant: Variant): GeneratedPrompt {
+export function generatePrompt(
+  input: PromptInput,
+  platform: Platform,
+  variant: Variant,
+  profile: PlatformProfile = resolveProfile(platform),
+): GeneratedPrompt {
   const fields =
     platform === "suno"
-      ? renderSuno(input, variant)
+      ? renderSuno(input, variant, profile)
       : platform === "udio"
-        ? renderUdio(input, variant)
+        ? renderUdio(input, variant, profile)
         : renderGeneric(input, variant);
 
   const combined = fields
@@ -315,7 +329,7 @@ export function generatePrompt(input: PromptInput, platform: Platform, variant: 
     .map((f) => `### ${f.label}\n${f.content}`)
     .join("\n\n");
 
-  return { platform, variant, fields, combined };
+  return { platform, variant, profileId: profile.id, fields, combined };
 }
 
 /** Short title for history entries. */

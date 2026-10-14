@@ -1,8 +1,11 @@
-import type { PromptInput, Suggestion } from "@/lib/types";
+import type { Platform, PromptInput, Suggestion } from "@/lib/types";
 import { clean, uniq } from "@/lib/utils";
+import { findCliches } from "@/lib/lyrics/analyze";
+import { findGlossaryTerms, translateText } from "@/lib/glossary/id-en";
+import { underperformersIn, type Insights } from "@/lib/insights";
 import { generatePrompt, isInstrumental } from "./generator";
-import { PLATFORMS } from "./platforms";
-import type { Platform } from "@/lib/types";
+import { planNegatives } from "./negatives";
+import { resolveProfile, type PlatformProfile } from "./platforms";
 
 /* ------------------------------------------------------------------ */
 /* Knowledge tables                                                     */
@@ -27,16 +30,6 @@ export const GENERIC_MOODS: Record<string, string[]> = {
   galau: ["restless heartache", "late-night overthinking"],
   romantis: ["shy, hesitant longing", "warm domestic intimacy"],
 };
-
-/** Overused lyric phrases that mark AI-written or lazy songwriting (EN + ID). */
-export const LYRIC_CLICHES: string[] = [
-  "neon lights", "city lights", "shadows", "whispers", "echoes", "fire inside", "burning bright",
-  "heart of gold", "we rise", "rise up", "break free", "into the night", "tapestry", "embrace the",
-  "soul on fire", "light the way", "broken wings", "stars align", "dancing in the rain",
-  "forever and always", "hand in hand", "lost in the moment", "chasing dreams", "against the odds",
-  "hati yang hancur", "air mata", "cinta sejati", "kau dan aku", "takkan pernah", "di bawah langit",
-  "bintang-bintang", "selamanya bersama", "hancur berkeping",
-];
 
 const GENRE_TIPS: Array<{ match: RegExp; title: string; detail: string }> = [
   {
@@ -84,10 +77,43 @@ export function findGenericMoods(input: PromptInput): string[] {
   return input.moods.filter((m) => GENERIC_MOODS[clean(m).toLowerCase()]);
 }
 
-export function findLyricCliches(lyrics: string): string[] {
-  const text = lyrics.toLowerCase();
-  if (!text.trim()) return [];
-  return LYRIC_CLICHES.filter((c) => text.includes(c));
+/** Whole-word cliché detection (delegates to the lyric workshop). */
+export const findLyricCliches = findCliches;
+
+/** Descriptor fields that should be English for the generator. */
+function descriptorTexts(input: PromptInput): string[] {
+  return [
+    input.genre,
+    ...input.subgenres,
+    ...input.moods,
+    input.emotionalArc,
+    input.tempoFeel,
+    ...input.instrumentsInclude,
+    input.vocal.timbre,
+    input.vocal.delivery,
+    ...Object.values(input.production),
+  ];
+}
+
+/** Translate every Indonesian glossary term found in descriptor fields. */
+export function translateDescriptors(input: PromptInput): PromptInput {
+  const t = (v: string) => translateText(v);
+  return {
+    ...input,
+    genre: t(input.genre),
+    subgenres: uniq(input.subgenres.map(t)),
+    moods: uniq(input.moods.map(t)),
+    emotionalArc: t(input.emotionalArc),
+    tempoFeel: t(input.tempoFeel),
+    instrumentsInclude: uniq(input.instrumentsInclude.map(t)),
+    vocal: { ...input.vocal, timbre: t(input.vocal.timbre), delivery: t(input.vocal.delivery) },
+    production: {
+      era: t(input.production.era),
+      mixStyle: t(input.production.mixStyle),
+      texture: t(input.production.texture),
+      space: t(input.production.space),
+    },
+  };
 }
 
 /** Words starting with a capital letter that aren't at a sentence start — likely artist/song names. */
@@ -155,8 +181,37 @@ export function specificityScore(input: PromptInput): ScoreBreakdown {
 /* Suggestion rules                                                     */
 /* ------------------------------------------------------------------ */
 
-export function buildSuggestions(input: PromptInput, platform: Platform): Suggestion[] {
+export interface SuggestionOptions {
+  profile?: PlatformProfile;
+  insights?: Insights;
+}
+
+export function buildSuggestions(input: PromptInput, platform: Platform, opts: SuggestionOptions = {}): Suggestion[] {
   const out: Suggestion[] = [];
+  const profile = opts.profile ?? resolveProfile(platform);
+
+  // Evidence from the user's own ratings outranks every heuristic below.
+  if (opts.insights) {
+    for (const d of underperformersIn(input, opts.insights)) {
+      out.push({
+        id: `insight-${d.descriptor}`,
+        level: "warning",
+        title: `Rating-mu: “${d.descriptor}” cenderung gagal`,
+        detail: `Dipakai di ${d.n} lagu yang kamu nilai, rata-rata ${d.avg.toFixed(1)}★ (${d.lift.toFixed(1)} di bawah rata-ratamu). Pertimbangkan menggantinya.`,
+      });
+    }
+  }
+
+  const idTerms = uniq(descriptorTexts(input).flatMap((t) => findGlossaryTerms(t ?? "").map((g) => `${g.id} → ${g.en}`)));
+  if (idTerms.length) {
+    out.push({
+      id: "glossary",
+      level: "tip",
+      title: "Deskriptor berbahasa Indonesia terdeteksi",
+      detail: `Generator lebih akurat membaca bahasa Inggris: ${idTerms.slice(0, 5).join(", ")}${idTerms.length > 5 ? ", …" : ""}.`,
+      actions: [{ label: "Terjemahkan semua", apply: translateDescriptors }],
+    });
+  }
 
   if (!clean(input.genre)) {
     out.push({
@@ -321,19 +376,47 @@ export function buildSuggestions(input: PromptInput, platform: Platform): Sugges
     });
   }
 
-  // Length check against platform limits (standard variant is the reference length).
-  const limits = PLATFORMS[platform].limits;
-  if (limits.style) {
-    const gen = generatePrompt(input, platform, "detailed");
-    const style = gen.fields.find((f) => f.key === "style");
-    if (style && style.content.length > limits.style) {
+  // Length check against the active platform profile.
+  if (profile.limits.style) {
+    const limit = profile.limits.style;
+    const len = (v: "compact" | "standard" | "detailed") =>
+      generatePrompt(input, platform, v, profile).fields.find((f) => f.key === "style")?.content.length ?? 0;
+    const std = len("standard");
+    const det = len("detailed");
+    if (std > limit) {
       out.push({
         id: "style-too-long",
         level: "warning",
+        title: `Style melebihi batas ${profile.label}`,
+        detail: `Varian Standar ${std}/${limit} karakter. Gunakan varian Ringkas (${len("compact")} karakter) atau kurangi deskriptor.`,
+      });
+    } else if (det > limit) {
+      out.push({
+        id: "style-detailed-too-long",
+        level: "tip",
         title: "Varian Detail melebihi batas Style",
-        detail: `${style.content.length}/${limits.style} karakter. Gunakan varian Standar/Ringkas atau kurangi deskriptor.`,
+        detail: `${det}/${limit} karakter. Varian Standar aman (${std}).`,
       });
     }
+  }
+
+  const plan = planNegatives(input);
+  if (plan.dropped.length) {
+    out.push({
+      id: "negatives-dropped",
+      level: "info",
+      title: `${plan.dropped.length} negatif otomatis dipangkas oleh budget`,
+      detail: `Budget ${input.negativeBudget} menjaga exclusion terpenting tetap kuat. Dipangkas: ${plan.dropped.join(", ")}.`,
+      actions: [{ label: "Naikkan budget +5", apply: (i) => ({ ...i, negativeBudget: i.negativeBudget + 5 }) }],
+    });
+  }
+  if (plan.user.length > input.negativeBudget && input.negativeBudget > 0) {
+    out.push({
+      id: "user-negatives-over",
+      level: "tip",
+      title: "Negatif manualmu melebihi budget",
+      detail: `${plan.user.length} negatif ditulis manual. Semuanya tetap dikirim, tapi daftar yang panjang bisa melemahkan masing-masing item.`,
+    });
   }
 
   const order = { warning: 0, tip: 1, info: 2 } as const;

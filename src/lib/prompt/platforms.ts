@@ -1,37 +1,114 @@
 import type { Platform, Variant } from "@/lib/types";
 
-export interface PlatformInfo {
-  id: Platform;
+export type LimitKey = "style" | "exclude" | "prompt" | "lyrics";
+
+/**
+ * Everything the generator needs to know about one model version of one platform.
+ * Kept as data (not code) so a new model release is a new entry, not a refactor —
+ * and so users can override values from the UI when a platform changes before we do.
+ */
+export interface PlatformProfile {
+  id: string;
+  platform: Platform;
+  /** Shown in the UI, e.g. "Suno v5 / v5.5 / v6". */
   label: string;
-  description: string;
-  /**
-   * Soft character limits for each output field.
-   * These change between model versions — verify against the generator you use
-   * and adjust here. Exceeding them only triggers a warning, never truncation.
-   */
-  limits: Partial<Record<"style" | "exclude" | "prompt" | "lyrics", number>>;
+  /** Soft character limits per output field. Missing = unknown, no warning. */
+  limits: Partial<Record<LimitKey, number>>;
+  /** Platform has a dedicated negative/exclude field — negatives never go in the main prompt. */
+  hasExcludeField: boolean;
+  /** Platform tends to sing text in (parentheses) as backing vocals. */
+  singsParentheses: boolean;
+  /** ISO date the values were last checked against the live product, or null if never. */
+  verifiedAt: string | null;
+  /** Where the numbers come from. Suno does not publish its limits. */
+  source: string;
+  notes?: string;
 }
 
-export const PLATFORMS: Record<Platform, PlatformInfo> = {
-  suno: {
-    id: "suno",
-    label: "Suno",
-    description: "Custom Mode: Style of Music + Exclude Styles + Lyrics (metatag).",
-    limits: { style: 1000, exclude: 1000, lyrics: 5000 },
-  },
-  udio: {
-    id: "udio",
-    label: "Udio",
-    description: "Prompt berbasis tag + lirik bertag terpisah.",
-    limits: {},
-  },
-  generic: {
-    id: "generic",
-    label: "Generic",
-    description: "Brief lengkap berbahasa natural untuk generator lain atau LLM.",
-    limits: {},
-  },
+export const PLATFORM_LABELS: Record<Platform, { label: string; description: string }> = {
+  suno: { label: "Suno", description: "Custom Mode: Style of Music + Exclude Styles + Lyrics (metatag)." },
+  udio: { label: "Udio", description: "Prompt berbasis tag + lirik bertag terpisah." },
+  generic: { label: "Generic", description: "Brief lengkap berbahasa natural untuk generator lain atau LLM." },
 };
+
+/** Ordered: the first profile of each platform is its default. */
+export const PLATFORM_PROFILES: PlatformProfile[] = [
+  {
+    id: "suno-v5",
+    platform: "suno",
+    label: "Suno v4.5 – v6",
+    limits: { style: 1000, exclude: 1000, lyrics: 5000 },
+    hasExcludeField: true,
+    singsParentheses: true,
+    verifiedAt: "2026-10-14",
+    source: "Pengukuran komunitas (hookgenius.app/learn/suno-character-limits). Suno tidak mempublikasikan batas resmi.",
+  },
+  {
+    id: "suno-v4",
+    platform: "suno",
+    label: "Suno v4 dan lebih lama",
+    limits: { style: 200, lyrics: 3000 },
+    hasExcludeField: false,
+    singsParentheses: true,
+    verifiedAt: "2026-10-14",
+    source: "Pengukuran komunitas. Batas exclude tidak diketahui.",
+    notes: "Style 200 karakter: gunakan varian Ringkas.",
+  },
+  {
+    id: "udio",
+    platform: "udio",
+    label: "Udio",
+    limits: {},
+    hasExcludeField: true,
+    singsParentheses: false,
+    verifiedAt: null,
+    source: "Batas tidak dipublikasikan dan belum diverifikasi. Isi sendiri lewat Pengaturan bila perlu.",
+  },
+  {
+    id: "generic",
+    platform: "generic",
+    label: "Generic / LLM",
+    limits: {},
+    hasExcludeField: false,
+    singsParentheses: false,
+    verifiedAt: null,
+    source: "Tanpa batas — ditujukan untuk sistem yang membaca instruksi bahasa natural.",
+  },
+];
+
+export type ProfileOverrides = Record<string, Partial<Pick<PlatformProfile, "limits" | "verifiedAt" | "hasExcludeField">>>;
+
+export function profilesFor(platform: Platform): PlatformProfile[] {
+  return PLATFORM_PROFILES.filter((p) => p.platform === platform);
+}
+
+export function defaultProfileId(platform: Platform): string {
+  return profilesFor(platform)[0].id;
+}
+
+/** Resolve a profile by id, applying user overrides. Falls back to the platform default. */
+export function resolveProfile(platform: Platform, profileId?: string, overrides: ProfileOverrides = {}): PlatformProfile {
+  const base = profilesFor(platform).find((p) => p.id === profileId) ?? profilesFor(platform)[0];
+  const o = overrides[base.id];
+  if (!o) return base;
+  // An override of 0 means "no known limit" (JSON cannot persist undefined).
+  const limits: PlatformProfile["limits"] = { ...base.limits };
+  for (const [k, v] of Object.entries(o.limits ?? {}) as Array<[LimitKey, number | undefined]>) {
+    if (v === undefined) continue;
+    if (v > 0) limits[k] = v;
+    else delete limits[k];
+  }
+  return { ...base, ...o, limits };
+}
+
+/** Days since verification, or null when never verified. */
+export function profileAgeDays(profile: PlatformProfile, now = Date.now()): number | null {
+  if (!profile.verifiedAt) return null;
+  const t = Date.parse(profile.verifiedAt);
+  return Number.isFinite(t) ? Math.floor((now - t) / 86_400_000) : null;
+}
+
+export const STALE_AFTER_DAYS = 90;
 
 export const VARIANTS: Record<Variant, { label: string; description: string }> = {
   compact: { label: "Ringkas", description: "Hanya sinyal terkuat. Cocok untuk eksperimen cepat." },

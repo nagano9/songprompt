@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Plus, X } from "lucide-react";
 import { cn, uniq } from "@/lib/utils";
+import { translateText } from "@/lib/glossary/id-en";
 
 interface TagInputProps {
   id?: string;
@@ -13,19 +14,37 @@ interface TagInputProps {
   suggestions?: string[];
   tone?: "default" | "negative";
   max?: number;
+  /** Auto-translate Indonesian glossary terms to English descriptors on commit. */
+  translate?: boolean;
 }
 
 /**
  * Chip input. Enter or comma commits a tag, Backspace on an empty field removes the last one.
  * Pasting "a, b, c" adds three tags at once.
  */
-export function TagInput({ id, value, onChange, placeholder, suggestions = [], tone = "default", max }: TagInputProps) {
+export function TagInput({ id, value, onChange, placeholder, suggestions = [], tone = "default", max, translate }: TagInputProps) {
   const [draft, setDraft] = React.useState("");
+  const [note, setNote] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => setNote(null), 3500);
+    return () => clearTimeout(t);
+  }, [note]);
   const atMax = max !== undefined && value.length >= max;
 
   const commit = (raw: string) => {
-    const parts = raw.split(",").map((p) => p.trim()).filter(Boolean);
+    let parts = raw.split(",").map((p) => p.trim()).filter(Boolean);
     if (!parts.length) return;
+    if (translate) {
+      const changed: string[] = [];
+      parts = parts.map((p) => {
+        const t = translateText(p);
+        if (t !== p) changed.push(`${p} → ${t}`);
+        return t;
+      });
+      if (changed.length) setNote(`Diterjemahkan: ${changed.join(", ")}`);
+    }
     let next = uniq([...value, ...parts]);
     if (max !== undefined) next = next.slice(0, max);
     onChange(next);
@@ -90,6 +109,11 @@ export function TagInput({ id, value, onChange, placeholder, suggestions = [], t
           className="min-w-[8rem] flex-1 bg-transparent px-1 py-0.5 text-sm outline-none placeholder:text-muted-foreground/70 disabled:cursor-not-allowed"
         />
       </div>
+      {note && (
+        <p className="text-xs text-accent-strong" role="status">
+          {note}
+        </p>
+      )}
       {open.length > 0 && !atMax && (
         <div className="flex flex-wrap gap-1.5">
           {open.map((s) => (
