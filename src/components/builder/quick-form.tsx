@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sliders } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +42,7 @@ export function QuickForm() {
           placeholder="mis. indie folk, keroncong, boom bap"
           list="quick-genres"
           aria-label="Genre utama"
+          className="font-mono text-xs"
         />
         <datalist id="quick-genres">
           {CHIP_SUGGESTIONS.genres.map((g) => (
@@ -51,7 +52,7 @@ export function QuickForm() {
         <GlossaryHint value={input.genre} onApply={(v) => setField("genre", v)} />
       </SectionCard>
 
-      <SectionCard index={2} title="Perasaan" description="Boleh bahasa Indonesia — “galau”, “sendu”, “rindu” otomatis diterjemahkan.">
+      <SectionCard index={2} title="Perasaan & Mood" description="Boleh bahasa Indonesia — “galau”, “sendu”, “rindu” otomatis diterjemahkan.">
         <TagInput
           id="moods"
           value={input.moods}
@@ -63,7 +64,7 @@ export function QuickForm() {
         />
       </SectionCard>
 
-      <SectionCard index={3} title="Cerita & vokal">
+      <SectionCard index={3} title="Cerita & Karakter Vokal">
         <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Jenis vokal">
           {VOCALS.map((v) => (
             <button
@@ -73,8 +74,10 @@ export function QuickForm() {
               aria-checked={input.vocal.type === v.value}
               onClick={() => setVocal({ type: v.value })}
               className={cn(
-                "rounded-full border px-3 py-1 text-xs font-medium",
-                input.vocal.type === v.value ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted",
+                "rounded-xs border px-2.5 py-1 font-mono text-[11px] font-medium transition-all active:translate-y-px",
+                input.vocal.type === v.value
+                  ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                  : "border-border/80 bg-card text-foreground hover:bg-muted/80",
               )}
             >
               {v.label}
@@ -82,7 +85,13 @@ export function QuickForm() {
           ))}
         </div>
         <Field label="Tentang apa lagunya?" htmlFor="theme">
-          <Input id="theme" value={input.theme} onChange={(e) => setField("theme", e.target.value)} placeholder="mis. surat yang tak pernah dikirim untuk nenek" />
+          <Input
+            id="theme"
+            value={input.theme}
+            onChange={(e) => setField("theme", e.target.value)}
+            placeholder="mis. surat yang tak pernah dikirim untuk nenek"
+            className="text-xs"
+          />
         </Field>
         {!instrumental && (
           <Field label="Lirik (sangat disarankan)" htmlFor="lyrics" hint="Pisahkan bait dengan baris kosong.">
@@ -91,7 +100,7 @@ export function QuickForm() {
               value={input.lyrics}
               onChange={(e) => setField("lyrics", e.target.value)}
               rows={8}
-              className="font-mono text-[13px] leading-relaxed"
+              className="font-mono text-xs leading-relaxed"
               placeholder={"Bait pertama…\n\nChorus…"}
             />
           </Field>
@@ -99,10 +108,17 @@ export function QuickForm() {
         {!instrumental && <LyricWorkshop />}
       </SectionCard>
 
-      <div className="rounded-xl border border-dashed p-4 text-center">
-        <p className="text-sm">Hasil masih generik? Tempo, instrumen, dan produksi adalah tuas terkuat berikutnya.</p>
-        <Button type="button" variant="outline" className="mt-2" onClick={() => setMode("full")}>
-          Perdalam ke mode lengkap <ArrowRight />
+      {/* Deep Dive Callout */}
+      <div className="rounded-sm border border-border/80 bg-secondary/30 p-4 text-center space-y-2">
+        <div className="flex items-center justify-center gap-1.5 font-mono text-xs font-semibold text-accent-strong uppercase">
+          <Sliders className="h-3.5 w-3.5" />
+          <span>Ingin Kontrol Akustik Lebih Lanjut?</span>
+        </div>
+        <p className="text-xs text-muted-foreground max-w-md mx-auto">
+          Tempo BPM, instrumen organik, gaya mixing analog, dan negative exclusion prompt adalah tuas terkuat berikutnya untuk mematikan slop AI.
+        </p>
+        <Button type="button" variant="outline" className="font-mono text-xs" onClick={() => setMode("full")}>
+          Perdalam ke mode lengkap <ArrowRight className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>

@@ -38,13 +38,15 @@ export function PromptForm() {
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        Tulis deskriptor dalam <strong className="font-medium text-foreground">bahasa Inggris</strong> — generator paling
-        akurat membacanya — istilah Indonesia yang dikenal (mis. “suara serak”, “mendayu”) bisa diterjemahkan sekali klik. Lirik boleh
-        bahasa apa pun.
-      </p>
+      <div className="flex items-center gap-2 rounded-sm border border-border/80 bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
+        <span className="font-mono text-accent-strong font-bold">INFO:</span>
+        <p className="leading-relaxed">
+          Gunakan deskriptor dalam <strong className="font-medium text-foreground">bahasa Inggris</strong> untuk akurasi generator AI.
+          Istilah Indonesia (mis. “suara serak”, “mendayu”) dapat diterjemahkan sekali klik. Lirik bebas dalam bahasa apa pun.
+        </p>
+      </div>
 
-      {/* 1. Genre */}
+      {/* 01. Genre */}
       <SectionCard index={1} title="Genre & Subgenre" description="Satu genre utama, maksimal dua subgenre. Fokus mengalahkan ‘genre soup’.">
         <Field label="Genre utama" htmlFor="genre">
           <Input
@@ -53,6 +55,7 @@ export function PromptForm() {
             onChange={(e) => setField("genre", e.target.value)}
             placeholder="mis. indie folk"
             list="genre-options"
+            className="font-mono text-xs"
           />
           <datalist id="genre-options">
             {CHIP_SUGGESTIONS.genres.map((g) => (
@@ -71,7 +74,7 @@ export function PromptForm() {
         </Field>
       </SectionCard>
 
-      {/* 2. Mood */}
+      {/* 02. Mood */}
       <SectionCard index={2} title="Mood & Emosi" description="Emosi spesifik → pilihan harmoni dan aransemen yang spesifik.">
         <Field label="Mood" htmlFor="moods">
           <TagInput
@@ -89,28 +92,35 @@ export function PromptForm() {
             value={input.emotionalArc}
             onChange={(e) => setField("emotionalArc", e.target.value)}
             placeholder="mis. starts hushed, swells in the final chorus, ends near-silent"
+            className="text-xs"
           />
           <GlossaryHint value={input.emotionalArc} onApply={(v) => setField("emotionalArc", v)} />
         </Field>
       </SectionCard>
 
-      {/* 3. Tempo */}
+      {/* 03. Tempo */}
       <SectionCard index={3} title="Tempo & Nada">
-        <div className="grid gap-4 sm:grid-cols-[7rem_1fr]">
+        <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
           <Field label="BPM" htmlFor="bpm">
-            <Input
-              id="bpm"
-              type="number"
-              inputMode="numeric"
-              min={40}
-              max={220}
-              value={input.bpm ?? ""}
-              onChange={(e) => {
-                const n = parseInt(e.target.value, 10);
-                setField("bpm", Number.isFinite(n) ? Math.max(1, Math.min(300, n)) : null);
-              }}
-              placeholder="76"
-            />
+            <div className="relative">
+              <Input
+                id="bpm"
+                type="number"
+                inputMode="numeric"
+                min={40}
+                max={220}
+                value={input.bpm ?? ""}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  setField("bpm", Number.isFinite(n) ? Math.max(1, Math.min(300, n)) : null);
+                }}
+                placeholder="76"
+                className="font-mono text-xs pr-10"
+              />
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted-foreground/60 uppercase">
+                BPM
+              </span>
+            </div>
           </Field>
           <Field label="Rasa tempo" htmlFor="tempo-feel">
             <Input
@@ -118,6 +128,7 @@ export function PromptForm() {
               value={input.tempoFeel}
               onChange={(e) => setField("tempoFeel", e.target.value)}
               placeholder="mis. lazy behind-the-beat swing"
+              className="text-xs"
             />
             <GlossaryHint value={input.tempoFeel} onApply={(v) => setField("tempoFeel", v)} />
           </Field>
@@ -128,11 +139,12 @@ export function PromptForm() {
             value={input.keyMode}
             onChange={(e) => setField("keyMode", e.target.value)}
             placeholder="mis. D major with modal borrowing"
+            className="text-xs font-mono"
           />
         </Field>
       </SectionCard>
 
-      {/* 4. Structure */}
+      {/* 04. Structure */}
       <SectionCard
         index={4}
         title="Struktur Lagu"
@@ -141,7 +153,7 @@ export function PromptForm() {
         <StructureEditor value={input.structure} onChange={(v) => setField("structure", v)} />
       </SectionCard>
 
-      {/* 5. Instruments */}
+      {/* 05. Instruments */}
       <SectionCard index={5} title="Instrumen" description="3–4 instrumen spesifik. ‘Felt piano’ lebih kuat dari ‘piano’.">
         <Field label="Instrumen utama" htmlFor="inst-in">
           <TagInput
@@ -165,7 +177,7 @@ export function PromptForm() {
         </Field>
       </SectionCard>
 
-      {/* 6. Vocals */}
+      {/* 06. Vocals */}
       <SectionCard index={6} title="Vokal">
         <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Jenis vokal">
           {VOCAL_TYPES.map((v) => {
@@ -178,8 +190,10 @@ export function PromptForm() {
                 aria-checked={active}
                 onClick={() => setVocal({ type: v.value })}
                 className={cn(
-                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                  active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted",
+                  "rounded-xs border px-2.5 py-1 font-mono text-[11px] font-medium transition-all active:translate-y-px",
+                  active
+                    ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                    : "border-border/80 bg-card text-foreground hover:bg-muted/80",
                 )}
               >
                 {v.label}
@@ -188,13 +202,14 @@ export function PromptForm() {
           })}
         </div>
         {!instrumental && (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 pt-2 sm:grid-cols-2">
             <Field label="Timbre" htmlFor="timbre">
               <Input
                 id="timbre"
                 value={input.vocal.timbre}
                 onChange={(e) => setVocal({ timbre: e.target.value })}
                 placeholder="mis. breathy alto with a slight rasp"
+                className="text-xs"
               />
               <GlossaryHint value={input.vocal.timbre} onApply={(v) => setVocal({ timbre: v })} />
             </Field>
@@ -204,6 +219,7 @@ export function PromptForm() {
                 value={input.vocal.delivery}
                 onChange={(e) => setVocal({ delivery: e.target.value })}
                 placeholder="mis. almost spoken in verses"
+                className="text-xs"
               />
               <GlossaryHint value={input.vocal.delivery} onApply={(v) => setVocal({ delivery: v })} />
             </Field>
@@ -213,6 +229,7 @@ export function PromptForm() {
                 value={input.vocal.accent}
                 onChange={(e) => setVocal({ accent: e.target.value })}
                 placeholder="mis. Javanese"
+                className="text-xs"
               />
               <GlossaryHint value={input.vocal.accent} onApply={(v) => setVocal({ accent: v.replace(/ accent$/i, "") })} />
             </Field>
@@ -222,21 +239,23 @@ export function PromptForm() {
                 value={input.vocal.language}
                 onChange={(e) => setVocal({ language: e.target.value })}
                 placeholder="mis. Indonesian"
+                className="text-xs"
               />
             </Field>
           </div>
         )}
       </SectionCard>
 
-      {/* 7. Production */}
+      {/* 07. Production */}
       <SectionCard index={7} title="Produksi & Mixing" description="Di sinilah ‘glossy AI sound’ paling mudah dilawan.">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Era / pendekatan" htmlFor="era">
             <Input
               id="era"
               value={input.production.era}
               onChange={(e) => setProduction({ era: e.target.value })}
               placeholder="mis. late-1970s analog studio"
+              className="text-xs"
             />
             <GlossaryHint value={input.production.era} onApply={(v) => setProduction({ era: v })} />
           </Field>
@@ -246,6 +265,7 @@ export function PromptForm() {
               value={input.production.mixStyle}
               onChange={(e) => setProduction({ mixStyle: e.target.value })}
               placeholder="mis. dry, close-miked, minimal compression"
+              className="text-xs"
             />
             <GlossaryHint value={input.production.mixStyle} onApply={(v) => setProduction({ mixStyle: v })} />
           </Field>
@@ -255,6 +275,7 @@ export function PromptForm() {
               value={input.production.texture}
               onChange={(e) => setProduction({ texture: e.target.value })}
               placeholder="mis. tape hiss, fret squeaks left in"
+              className="text-xs"
             />
             <GlossaryHint value={input.production.texture} onApply={(v) => setProduction({ texture: v })} />
           </Field>
@@ -264,15 +285,16 @@ export function PromptForm() {
               value={input.production.space}
               onChange={(e) => setProduction({ space: e.target.value })}
               placeholder="mis. small wooden room"
+              className="text-xs"
             />
             <GlossaryHint value={input.production.space} onApply={(v) => setProduction({ space: v })} />
           </Field>
         </div>
       </SectionCard>
 
-      {/* 8. Anti-slop + negatives */}
+      {/* 08. Anti-slop + negatives */}
       <SectionCard index={8} title="Anti-Slop & Negative Prompt">
-        <div className="space-y-3 rounded-lg border bg-muted/40 p-3">
+        <div className="space-y-3 rounded-sm border border-border/70 bg-secondary/30 p-3">
           <div className="flex items-start gap-3">
             <Switch
               id="strong"
@@ -281,13 +303,13 @@ export function PromptForm() {
               className="mt-0.5"
             />
             <div className="space-y-0.5">
-              <Label htmlFor="strong">Include strong anti-slop instructions</Label>
-              <p className="text-xs text-muted-foreground">
+              <Label htmlFor="strong" className="text-xs font-semibold">Include strong anti-slop instructions</Label>
+              <p className="text-[11.5px] text-muted-foreground">
                 Menambah arahan positif (human feel, kontras dinamika, aransemen yang disengaja) + exclusion tambahan.
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 border-t border-border/40 pt-2.5">
             <Checkbox
               id="defaults"
               checked={input.useDefaultNegatives}
@@ -295,8 +317,8 @@ export function PromptForm() {
               className="mt-0.5"
             />
             <div className="space-y-0.5">
-              <Label htmlFor="defaults">Pakai negatif bawaan (genre-aware)</Label>
-              <p className="text-xs text-muted-foreground">
+              <Label htmlFor="defaults" className="text-xs font-semibold">Pakai negatif bawaan (genre-aware)</Label>
+              <p className="text-[11.5px] text-muted-foreground">
                 Otomatis menyesuaikan genre dan membuang yang bertentangan dengan pilihanmu.
               </p>
             </div>
@@ -305,7 +327,7 @@ export function PromptForm() {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="neg-budget">Budget negatif</Label>
+            <Label htmlFor="neg-budget" className="text-xs font-semibold">Budget negatif</Label>
             <div className="flex items-center gap-2">
               <input
                 id="neg-budget"
@@ -314,26 +336,26 @@ export function PromptForm() {
                 max={25}
                 value={input.negativeBudget}
                 onChange={(e) => setField("negativeBudget", Number(e.target.value))}
-                className="w-32 accent-[var(--accent-strong)]"
+                className="w-32 accent-[var(--accent)]"
               />
-              <span className="w-16 text-right font-mono text-xs tabular-nums">
+              <span className="w-16 text-right font-mono text-xs tabular-nums text-foreground">
                 {input.negativeBudget === 0 ? "tanpa batas" : `${negPlan.sent.length}/${input.negativeBudget}`}
               </span>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Daftar exclusion yang panjang melemahkan tiap item. Negatif yang kamu tulis sendiri selalu dikirim; sisa budget diisi negatif
+          <p className="text-[11px] text-muted-foreground">
+            Daftar exclusion yang terlalu panjang melemahkan tiap item. Negatif yang kamu tulis sendiri selalu dikirim; sisa budget diisi negatif
             otomatis berprioritas tertinggi.
           </p>
           {(autoSent.length > 0 || negPlan.dropped.length > 0) && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 pt-1">
               {autoSent.map((n) => (
-                <span key={n} className="rounded bg-destructive/8 px-1.5 py-0.5 text-[11px] text-destructive/90">
+                <span key={n} className="rounded-xs border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 font-mono text-[10.5px] text-destructive">
                   {n}
                 </span>
               ))}
               {negPlan.dropped.map((n) => (
-                <span key={n} className="rounded border border-dashed px-1.5 py-0.5 text-[11px] text-muted-foreground/70 line-through" title="Dipangkas oleh budget">
+                <span key={n} className="rounded-xs border border-dashed border-border px-1.5 py-0.5 font-mono text-[10.5px] text-muted-foreground/70 line-through" title="Dipangkas oleh budget">
                   {n}
                 </span>
               ))}
@@ -352,11 +374,11 @@ export function PromptForm() {
         </Field>
       </SectionCard>
 
-      {/* 9. Theme & lyrics */}
+      {/* 09. Theme & lyrics */}
       <SectionCard
         index={9}
         title="Tema & Lirik"
-        description="Lirik milikmu sendiri adalah pembeda terbesar antara lagu dan slop."
+        description="Lirik milikmu sendiri adalah pembeda terbesar antara lagu berkualitas dan slop."
       >
         <Field label="Tema / cerita" htmlFor="theme">
           <Input
@@ -364,6 +386,7 @@ export function PromptForm() {
             value={input.theme}
             onChange={(e) => setField("theme", e.target.value)}
             placeholder="mis. surat yang tak pernah dikirim untuk nenek"
+            className="text-xs"
           />
         </Field>
         {!instrumental && (
@@ -376,8 +399,8 @@ export function PromptForm() {
               id="lyrics"
               value={input.lyrics}
               onChange={(e) => setField("lyrics", e.target.value)}
-              rows={10}
-              className="font-mono text-[13px] leading-relaxed"
+              rows={9}
+              className="font-mono text-xs leading-relaxed"
               placeholder={"Bait pertama…\n\nChorus…\n\nBait kedua…"}
             />
           </Field>
@@ -398,6 +421,7 @@ export function PromptForm() {
             onChange={(e) => setField("references", e.target.value)}
             rows={2}
             placeholder="mis. mirip Iwan Fals dengan sentuhan Portishead"
+            className="text-xs"
           />
         </Field>
         <ReferenceTranslator />

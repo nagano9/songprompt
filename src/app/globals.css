@@ -1,56 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Palette: warm "studio paper" neutrals + one amber accent (VU-meter needle).
- * Light/dark follow the OS preference. shadcn/ui token names are kept so
- * `npx shadcn add <component>` drops in without restyling.
+ * Authentic Audio Hardware & Studio Console Palette
+ * Inspired by Teenage Engineering, Elektron & High-End Mastering Consoles.
+ * No AI slop: crisp hairlines, precision metric meters, zero-pill discipline, tactile studio feedback.
  */
 :root {
-  --background: oklch(0.982 0.006 85);
-  --foreground: oklch(0.22 0.012 60);
-  --card: oklch(0.998 0.002 85);
-  --card-foreground: var(--foreground);
-  --popover: var(--card);
-  --popover-foreground: var(--foreground);
-  --primary: oklch(0.24 0.012 60);
-  --primary-foreground: oklch(0.982 0.006 85);
-  --secondary: oklch(0.94 0.012 80);
-  --secondary-foreground: var(--foreground);
-  --muted: oklch(0.955 0.008 80);
-  --muted-foreground: oklch(0.5 0.014 60);
-  --accent: oklch(0.78 0.15 68);
-  --accent-foreground: oklch(0.22 0.03 60);
-  --accent-strong: oklch(0.58 0.15 55);
-  --destructive: oklch(0.56 0.2 27);
-  --border: oklch(0.9 0.01 80);
-  --input: oklch(0.87 0.01 80);
-  --ring: oklch(0.72 0.15 62);
-  --radius: 0.625rem;
+  --background: #f5f6f9;
+  --foreground: #11141c;
+  --card: #ffffff;
+  --card-foreground: #11141c;
+  --popover: #ffffff;
+  --popover-foreground: #11141c;
+  --primary: #12151e;
+  --primary-foreground: #ffffff;
+  --secondary: #eceef3;
+  --secondary-foreground: #141720;
+  --muted: #f0f2f6;
+  --muted-foreground: #5c6475;
+  --accent: #d97706;
+  --accent-foreground: #ffffff;
+  --accent-strong: #b45309;
+  --destructive: #dc2626;
+  --border: #d7dce5;
+  --input: #d0d6e2;
+  --ring: #d97706;
+  --radius: 0.375rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: oklch(0.19 0.006 60);
-    --foreground: oklch(0.94 0.008 80);
-    --card: oklch(0.225 0.007 60);
-    --card-foreground: var(--foreground);
-    --popover: var(--card);
-    --popover-foreground: var(--foreground);
-    --primary: oklch(0.94 0.008 80);
-    --primary-foreground: oklch(0.2 0.006 60);
-    --secondary: oklch(0.29 0.008 60);
-    --secondary-foreground: var(--foreground);
-    --muted: oklch(0.26 0.007 60);
-    --muted-foreground: oklch(0.7 0.012 70);
-    --accent: oklch(0.78 0.15 68);
-    --accent-foreground: oklch(0.2 0.03 60);
-    --accent-strong: oklch(0.8 0.14 68);
-    --destructive: oklch(0.66 0.19 25);
-    --border: oklch(0.32 0.008 60);
-    --input: oklch(0.36 0.008 60);
-    --ring: oklch(0.72 0.15 62);
+    --background: #0a0b0e;
+    --foreground: #f1f3f7;
+    --card: #12141a;
+    --card-foreground: #f1f3f7;
+    --popover: #12141a;
+    --popover-foreground: #f1f3f7;
+    --primary: #f1f3f7;
+    --primary-foreground: #0a0b0e;
+    --secondary: #1a1d26;
+    --secondary-foreground: #e4e7ef;
+    --muted: #161821;
+    --muted-foreground: #848d9f;
+    --accent: #f59e0b;
+    --accent-foreground: #0a0b0e;
+    --accent-strong: #fbbf24;
+    --destructive: #ef4444;
+    --border: #242834;
+    --input: #272c3a;
+    --ring: #f59e0b;
   }
 }
 
@@ -75,13 +76,13 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 @layer base {
@@ -90,8 +91,25 @@
   }
   body {
     background-color: var(--background);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   input[type="number"]::-webkit-inner-spin-button {
     opacity: 0.4;
   }
+}
+
+/* Studio audio rack hairline and texture utilities */
+.studio-grid-bg {
+  background-image: radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.studio-panel {
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.dark .studio-panel {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }

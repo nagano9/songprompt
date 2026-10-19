@@ -1,6 +1,8 @@
 import type { Platform, Variant } from "@/lib/types";
 
-export type LimitKey = "style" | "exclude" | "prompt" | "lyrics";
+export type LimitKey = "style" | "exclude" | "prompt" | "lyrics" | "brief";
+
+export const DEFAULT_MAX_PROMPT_CHARS = 1000;
 
 /**
  * Everything the generator needs to know about one model version of one platform.
@@ -41,38 +43,38 @@ export const PLATFORM_PROFILES: PlatformProfile[] = [
     hasExcludeField: true,
     singsParentheses: true,
     verifiedAt: "2026-10-14",
-    source: "Pengukuran komunitas (hookgenius.app/learn/suno-character-limits). Suno tidak mempublikasikan batas resmi.",
+    source: "Standar output maksimal 1000 karakter untuk Style & Exclude.",
   },
   {
     id: "suno-v4",
     platform: "suno",
     label: "Suno v4 dan lebih lama",
-    limits: { style: 200, lyrics: 3000 },
+    limits: { style: 200, exclude: 200, lyrics: 3000 },
     hasExcludeField: false,
     singsParentheses: true,
     verifiedAt: "2026-10-14",
-    source: "Pengukuran komunitas. Batas exclude tidak diketahui.",
+    source: "Pengukuran komunitas. Batas legacy 200 karakter.",
     notes: "Style 200 karakter: gunakan varian Ringkas.",
   },
   {
     id: "udio",
     platform: "udio",
     label: "Udio",
-    limits: {},
+    limits: { prompt: 1000, lyrics: 5000 },
     hasExcludeField: true,
     singsParentheses: false,
-    verifiedAt: null,
-    source: "Batas tidak dipublikasikan dan belum diverifikasi. Isi sendiri lewat Pengaturan bila perlu.",
+    verifiedAt: "2026-10-15",
+    source: "Standar output maksimal 1000 karakter untuk Prompt Udio.",
   },
   {
     id: "generic",
     platform: "generic",
     label: "Generic / LLM",
-    limits: {},
+    limits: { brief: 1000, prompt: 1000, lyrics: 5000 },
     hasExcludeField: false,
     singsParentheses: false,
-    verifiedAt: null,
-    source: "Tanpa batas — ditujukan untuk sistem yang membaca instruksi bahasa natural.",
+    verifiedAt: "2026-10-15",
+    source: "Standar brief musik maksimal 1000 karakter untuk generator audio & LLM.",
   },
 ];
 

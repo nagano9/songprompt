@@ -211,6 +211,28 @@ function lyricsHint(input: PromptInput): string | undefined {
   return "Paragraf lirik dibagikan otomatis ke section (dipisah baris kosong).";
 }
 
+/**
+ * Trims a prompt string so that it stays strictly within maxChars without cutting words in half.
+ * Prefers cutting at commas, periods, or word boundaries.
+ */
+export function smartTrim(text: string, maxChars = 1000): string {
+  if (!text || text.length <= maxChars) return text;
+  const sliced = text.slice(0, maxChars);
+  // Find clean cut at punctuation or space
+  const lastComma = sliced.lastIndexOf(",");
+  const lastPeriod = sliced.lastIndexOf(".");
+  const lastSemi = sliced.lastIndexOf(";");
+  const cutPoint = Math.max(lastComma, lastPeriod, lastSemi);
+  if (cutPoint > maxChars * 0.7) {
+    return sliced.slice(0, cutPoint).trim().replace(/[,;.\s]+$/, "");
+  }
+  const lastSpace = sliced.lastIndexOf(" ");
+  if (lastSpace > maxChars * 0.7) {
+    return sliced.slice(0, lastSpace).trim().replace(/[,;.\s]+$/, "");
+  }
+  return sliced.trim();
+}
+
 function renderSuno(input: PromptInput, variant: Variant, profile: PlatformProfile): PromptField[] {
   const limits = profile.limits;
   const style = variant === "detailed" ? sentenceDescriptors(input, false) : tagDescriptors(input, variant).join(", ");
@@ -220,14 +242,14 @@ function renderSuno(input: PromptInput, variant: Variant, profile: PlatformProfi
       key: "style",
       label: "Style of Music",
       content: style,
-      limit: limits.style,
+      limit: limits.style ?? 1000,
       hint: "Hanya deskriptor positif. Hal yang dihindari ada di Exclude Styles agar tidak ‘memancing’ model.",
     },
     {
       key: "exclude",
       label: "Exclude Styles",
       content: negatives.join(", "),
-      limit: limits.exclude,
+      limit: limits.exclude ?? 1000,
       hint: profile.hasExcludeField
         ? "Tempel di kolom Exclude Styles (More Options) pada Custom Mode."
         : "Versi ini tidak punya kolom Exclude. Jangan tempel ke Style — pakai sebagai checklist saat memilih hasil.",
@@ -246,11 +268,12 @@ function renderUdio(input: PromptInput, variant: Variant, profile: PlatformProfi
   const prompt = variant === "detailed" ? sentenceDescriptors(input, false) : tagDescriptors(input, variant).join(", ");
   const negatives = resolveNegatives(input);
   return [
-    { key: "prompt", label: "Prompt", content: prompt, limit: profile.limits.prompt, hint: "Tag paling penting ada di depan." },
+    { key: "prompt", label: "Prompt", content: prompt, limit: profile.limits.prompt ?? 1000, hint: "Tag paling penting ada di depan." },
     {
       key: "avoid",
       label: "Avoid / Negative",
       content: negatives.join(", "),
+      limit: profile.limits.exclude ?? 1000,
       hint: "Tempel di kolom negatif jika tersedia di versi Udio kamu. Jangan ditempel ke prompt utama.",
     },
     {
@@ -263,9 +286,10 @@ function renderUdio(input: PromptInput, variant: Variant, profile: PlatformProfi
   ];
 }
 
-function renderGeneric(input: PromptInput, variant: Variant): PromptField[] {
+function renderGeneric(input: PromptInput, variant: Variant, profile?: PlatformProfile): PromptField[] {
   const negatives = resolveNegatives(input);
   const lyrics = buildLyrics(input, variant);
+  const briefLimit = profile?.limits.brief ?? profile?.limits.prompt ?? 1000;
 
   if (variant === "compact") {
     const brief = [
@@ -276,8 +300,8 @@ function renderGeneric(input: PromptInput, variant: Variant): PromptField[] {
       .filter(Boolean)
       .join(" ");
     return [
-      { key: "brief", label: "Music Brief", content: brief },
-      { key: "lyrics", label: "Lyrics", content: lyrics, hint: lyricsHint(input) },
+      { key: "brief", label: "Music Brief", content: brief, limit: briefLimit },
+      { key: "lyrics", label: "Lyrics", content: lyrics, limit: profile?.limits.lyrics, hint: lyricsHint(input) },
     ];
   }
 
@@ -302,8 +326,8 @@ function renderGeneric(input: PromptInput, variant: Variant): PromptField[] {
   ].filter(Boolean);
 
   return [
-    { key: "brief", label: "Music Brief", content: blocks.join("\n") },
-    { key: "lyrics", label: "Lyrics", content: lyrics, hint: lyricsHint(input) },
+    { key: "brief", label: "Music Brief", content: blocks.join("\n"), limit: briefLimit },
+    { key: "lyrics", label: "Lyrics", content: lyrics, limit: profile?.limits.lyrics, hint: lyricsHint(input) },
   ];
 }
 
@@ -311,25 +335,46 @@ function renderGeneric(input: PromptInput, variant: Variant): PromptField[] {
 /* Public API                                                           */
 /* ------------------------------------------------------------------ */
 
+export interface GenerateOptions {
+  autoTrim?: boolean;
+  maxPromptLength?: number;
+}
+
 export function generatePrompt(
   input: PromptInput,
   platform: Platform,
   variant: Variant,
   profile: PlatformProfile = resolveProfile(platform),
+  options: GenerateOptions = {},
 ): GeneratedPrompt {
   const fields =
     platform === "suno"
       ? renderSuno(input, variant, profile)
       : platform === "udio"
         ? renderUdio(input, variant, profile)
-        : renderGeneric(input, variant);
+        : renderGeneric(input, variant, profile);
 
-  const combined = fields
+  const processedFields = fields.map((f) => {
+    const targetLimit = options.maxPromptLength ?? f.limit;
+    if (options.autoTrim && targetLimit && f.content.length > targetLimit && f.key !== "lyrics") {
+      return {
+        ...f,
+        content: smartTrim(f.content, targetLimit),
+        limit: targetLimit,
+      };
+    }
+    return {
+      ...f,
+      limit: targetLimit,
+    };
+  });
+
+  const combined = processedFields
     .filter((f) => f.content.trim())
     .map((f) => `### ${f.label}\n${f.content}`)
     .join("\n\n");
 
-  return { platform, variant, profileId: profile.id, fields, combined };
+  return { platform, variant, profileId: profile.id, fields: processedFields, combined };
 }
 
 /** Short title for history entries. */

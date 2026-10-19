@@ -377,24 +377,25 @@ export function buildSuggestions(input: PromptInput, platform: Platform, opts: S
   }
 
   // Length check against the active platform profile.
-  if (profile.limits.style) {
-    const limit = profile.limits.style;
+  const activeLimit = profile.limits.style ?? profile.limits.prompt ?? profile.limits.brief;
+  if (activeLimit) {
+    const limit = activeLimit;
     const len = (v: "compact" | "standard" | "detailed") =>
-      generatePrompt(input, platform, v, profile).fields.find((f) => f.key === "style")?.content.length ?? 0;
+      generatePrompt(input, platform, v, profile).fields.find((f) => f.key === "style" || f.key === "prompt" || f.key === "brief")?.content.length ?? 0;
     const std = len("standard");
     const det = len("detailed");
     if (std > limit) {
       out.push({
         id: "style-too-long",
         level: "warning",
-        title: `Style melebihi batas ${profile.label}`,
-        detail: `Varian Standar ${std}/${limit} karakter. Gunakan varian Ringkas (${len("compact")} karakter) atau kurangi deskriptor.`,
+        title: `Prompt melebihi batas ${limit} karakter (${profile.label})`,
+        detail: `Varian Standar ${std}/${limit} karakter. Gunakan varian Ringkas (${len("compact")} karakter), aktifkan auto-trim 1000 karakter, atau kurangi deskriptor.`,
       });
     } else if (det > limit) {
       out.push({
         id: "style-detailed-too-long",
         level: "tip",
-        title: "Varian Detail melebihi batas Style",
+        title: `Varian Detail melebihi batas ${limit} karakter`,
         detail: `${det}/${limit} karakter. Varian Standar aman (${std}).`,
       });
     }

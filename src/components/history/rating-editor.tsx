@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
 export function StarRow({ value, onChange, size = "md" }: { value: number; onChange?: (n: number) => void; size?: "sm" | "md" }) {
   const [hover, setHover] = React.useState(0);
   const shown = hover || value;
-  const cls = size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5";
+  const cls = size === "sm" ? "h-3.5 w-3.5" : "h-4.5 w-4.5";
   return (
-    <div className="flex" role={onChange ? "radiogroup" : undefined} aria-label="Rating" onMouseLeave={() => setHover(0)}>
+    <div className="flex items-center gap-0.5" role={onChange ? "radiogroup" : undefined} aria-label="Rating" onMouseLeave={() => setHover(0)}>
       {[1, 2, 3, 4, 5].map((n) =>
         onChange ? (
           <button
@@ -22,9 +22,9 @@ export function StarRow({ value, onChange, size = "md" }: { value: number; onCha
             aria-label={`${n} bintang`}
             onMouseEnter={() => setHover(n)}
             onClick={() => onChange(n)}
-            className="p-0.5"
+            className="p-0.5 transition-transform hover:scale-110 active:scale-95"
           >
-            <Star className={cn(cls, n <= shown ? "fill-accent text-accent" : "text-muted-foreground/40")} />
+            <Star className={cn(cls, n <= shown ? "fill-accent text-accent" : "text-muted-foreground/30")} />
           </button>
         ) : (
           <Star key={n} className={cn(cls, n <= shown ? "fill-accent text-accent" : "text-muted-foreground/30")} aria-hidden />
@@ -43,12 +43,16 @@ export function RatingEditor({ initial, onSave, onCancel }: { initial?: Rating; 
   const toggle = (id: IssueTag) => setIssues((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   return (
-    <div className="space-y-2.5 rounded-lg border bg-muted/40 p-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium">Seberapa bagus lagu yang dihasilkan?</span>
+    <div className="space-y-2.5 rounded-sm border border-border/80 bg-secondary/30 p-3">
+      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+        <span className="font-mono text-xs font-semibold text-foreground uppercase tracking-wide">
+          Evaluasi Kualitas Audio
+        </span>
         <StarRow value={score} onChange={setScore} />
       </div>
-      <div className="flex flex-wrap gap-1.5">
+
+      {/* Zero-Pill Discipline: Industrial Quality Parameter Tags */}
+      <div className="flex flex-wrap gap-1">
         {ISSUE_TAGS.map((t) => {
           const active = issues.includes(t.id);
           const positive = t.id.startsWith("great");
@@ -59,12 +63,12 @@ export function RatingEditor({ initial, onSave, onCancel }: { initial?: Rating; 
               aria-pressed={active}
               onClick={() => toggle(t.id)}
               className={cn(
-                "rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+                "rounded-xs border px-2 py-0.5 font-mono text-[11px] font-medium transition-all active:translate-y-px",
                 active
                   ? positive
-                    ? "border-emerald-600 bg-emerald-600 text-white"
-                    : "border-destructive bg-destructive text-white"
-                  : "bg-card hover:bg-muted",
+                    ? "border-emerald-600 bg-emerald-600 text-white shadow-xs"
+                    : "border-destructive bg-destructive text-white shadow-xs"
+                  : "border-border/80 bg-card text-foreground hover:bg-muted/80",
               )}
             >
               {t.label}
@@ -72,22 +76,31 @@ export function RatingEditor({ initial, onSave, onCancel }: { initial?: Rating; 
           );
         })}
       </div>
+
       <input
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Catatan singkat (opsional), mis. take ke-2 di Suno paling bagus"
-        className="h-8 w-full rounded-md border border-input bg-card px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="h-7 w-full rounded-xs border border-input bg-card px-2 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       />
-      <div className="flex gap-1.5">
-        <Button type="button" size="sm" variant="accent" disabled={!score} onClick={() => onSave({ score, issues, note: note.trim(), ratedAt: Date.now() })}>
+
+      <div className="flex items-center gap-1.5 pt-1">
+        <Button
+          type="button"
+          size="sm"
+          variant="accent"
+          disabled={!score}
+          onClick={() => onSave({ score, issues, note: note.trim(), ratedAt: Date.now() })}
+          className="h-7 font-mono text-xs"
+        >
           Simpan rating
         </Button>
         {initial && (
-          <Button type="button" size="sm" variant="ghost" onClick={() => onSave(undefined)}>
+          <Button type="button" size="sm" variant="ghost" className="h-7 font-mono text-xs text-muted-foreground hover:text-destructive" onClick={() => onSave(undefined)}>
             Hapus rating
           </Button>
         )}
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+        <Button type="button" size="sm" variant="ghost" className="h-7 font-mono text-xs" onClick={onCancel}>
           Batal
         </Button>
       </div>

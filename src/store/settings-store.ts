@@ -12,6 +12,8 @@ interface SettingsState {
   mode: FormMode;
   profileByPlatform: Record<Platform, string>;
   profileOverrides: ProfileOverrides;
+  maxPromptLength: number;
+  autoTrimPrompt: boolean;
   llmEnabled: boolean;
   llmModel: string;
   /** Kept in memory only unless rememberKey is on. */
@@ -21,6 +23,9 @@ interface SettingsState {
   setMode: (m: FormMode) => void;
   setProfile: (platform: Platform, id: string) => void;
   setOverride: (profileId: string, patch: ProfileOverrides[string] | null) => void;
+  setMaxPromptLength: (n: number) => void;
+  setAutoTrimPrompt: (v: boolean) => void;
+  setAllProfilesTo1000: () => void;
   setLlm: (patch: Partial<Pick<SettingsState, "llmEnabled" | "llmModel" | "apiKey" | "rememberKey">>) => void;
 }
 
@@ -30,6 +35,8 @@ export const useSettingsStore = create<SettingsState>()(
       mode: "full",
       profileByPlatform: { suno: defaultProfileId("suno"), udio: defaultProfileId("udio"), generic: defaultProfileId("generic") },
       profileOverrides: {},
+      maxPromptLength: 1000,
+      autoTrimPrompt: false,
       llmEnabled: false,
       llmModel: DEFAULT_MODEL,
       apiKey: "",
@@ -44,6 +51,18 @@ export const useSettingsStore = create<SettingsState>()(
           else next[profileId] = { ...next[profileId], ...patch, limits: { ...next[profileId]?.limits, ...patch.limits } };
           return { profileOverrides: next };
         }),
+      setMaxPromptLength: (maxPromptLength) => set({ maxPromptLength }),
+      setAutoTrimPrompt: (autoTrimPrompt) => set({ autoTrimPrompt }),
+      setAllProfilesTo1000: () =>
+        set((s) => ({
+          maxPromptLength: 1000,
+          profileOverrides: {
+            ...s.profileOverrides,
+            "suno-v5": { limits: { style: 1000, exclude: 1000, lyrics: 5000 } },
+            "udio": { limits: { prompt: 1000, lyrics: 5000 } },
+            "generic": { limits: { brief: 1000, prompt: 1000, lyrics: 5000 } },
+          },
+        })),
       setLlm: (patch) => set(patch),
     }),
     {
@@ -56,6 +75,8 @@ export const useSettingsStore = create<SettingsState>()(
         mode: s.mode,
         profileByPlatform: s.profileByPlatform,
         profileOverrides: s.profileOverrides,
+        maxPromptLength: s.maxPromptLength,
+        autoTrimPrompt: s.autoTrimPrompt,
         llmEnabled: s.llmEnabled,
         llmModel: s.llmModel,
         rememberKey: s.rememberKey,

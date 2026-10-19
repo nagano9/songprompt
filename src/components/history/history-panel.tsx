@@ -60,32 +60,34 @@ function EntryCard({ e, onRestored }: { e: HistoryEntry; onRestored?: () => void
   };
 
   return (
-    <li className={cn("rounded-lg border bg-card p-3", e.pinned && "border-accent/60")}>
-      <div className="flex items-start justify-between gap-2">
+    <li className={cn("rounded-sm border border-border/80 bg-card p-3 transition-colors", e.pinned && "border-accent/60 bg-accent/5")}>
+      <div className="flex items-start justify-between gap-2 border-b border-border/40 pb-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{e.title}</p>
-          <p className="text-[11px] text-muted-foreground">{fmt.format(e.createdAt)}</p>
+          <p className="truncate text-xs font-semibold text-foreground">{e.title}</p>
+          <p className="font-mono text-[10.5px] text-muted-foreground">{fmt.format(e.createdAt)}</p>
         </div>
         <div className="flex shrink-0 flex-wrap justify-end gap-1">
           {e.experiment && (
-            <Badge variant="accent">
-              <FlaskConical className="h-3 w-3" /> {e.experiment.take}
+            <Badge variant="accent" className="text-[10px]">
+              <FlaskConical className="h-2.5 w-2.5" /> {e.experiment.take}
             </Badge>
           )}
-          <Badge variant="secondary">{PLATFORM_LABELS[e.platform].label}</Badge>
-          <Badge variant="outline">{VARIANTS[e.variant].label}</Badge>
+          <Badge variant="secondary" className="text-[10px]">{PLATFORM_LABELS[e.platform].label}</Badge>
+          <Badge variant="outline" className="text-[10px]">{VARIANTS[e.variant].label}</Badge>
         </div>
       </div>
 
-      {e.experiment && <p className="mt-1 text-[11px] text-muted-foreground">Variabel: {e.experiment.label}</p>}
+      {e.experiment && <p className="mt-1 font-mono text-[10.5px] text-muted-foreground">Variabel: {e.experiment.label}</p>}
 
-      <p className="mt-2 line-clamp-2 font-mono text-[11.5px] leading-relaxed text-muted-foreground">{e.output.fields[0]?.content}</p>
+      <p className="mt-2 line-clamp-2 font-mono text-[11px] leading-relaxed text-muted-foreground bg-secondary/30 p-2 rounded-xs border border-border/40">
+        {e.output.fields[0]?.content}
+      </p>
 
       {(e.rating || (e.tags && e.tags.length > 0)) && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {e.rating && <StarRow value={e.rating.score} size="sm" />}
           {e.rating?.issues.map((i) => (
-            <span key={i} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+            <span key={i} className="rounded-xs border border-border/80 bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
               {i}
             </span>
           ))}
@@ -94,7 +96,7 @@ function EntryCard({ e, onRestored }: { e: HistoryEntry; onRestored?: () => void
               key={t}
               type="button"
               onClick={() => setTags(e.id, (e.tags ?? []).filter((x) => x !== t))}
-              className="rounded bg-secondary px-1.5 py-0.5 text-[10px] hover:line-through"
+              className="rounded-xs border border-border/60 bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-foreground hover:line-through"
               title="Klik untuk menghapus tag"
             >
               #{t}
@@ -119,9 +121,9 @@ function EntryCard({ e, onRestored }: { e: HistoryEntry; onRestored?: () => void
             value={tagDraft}
             onChange={(ev) => setTagDraft(ev.target.value)}
             placeholder="tag, pisahkan koma"
-            className="h-8 flex-1 rounded-md border border-input bg-card px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-7 flex-1 rounded-xs border border-input bg-card px-2 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
-          <Button type="submit" size="sm" variant="outline">
+          <Button type="submit" size="sm" variant="outline" className="h-7 font-mono text-xs">
             Tambah
           </Button>
         </form>
@@ -140,39 +142,40 @@ function EntryCard({ e, onRestored }: { e: HistoryEntry; onRestored?: () => void
         </div>
       )}
 
-      <div className="mt-2 flex flex-wrap items-center gap-1">
-        <CopyButton text={e.output.combined} size="sm" variant="outline" label="Copy" />
-        <Button size="sm" variant={e.rating ? "outline" : "accent"} onClick={() => setRatingOpen((o) => !o)}>
-          <Star /> {e.rating ? "Ubah rating" : "Nilai hasil"}
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/40">
+        <CopyButton text={e.output.combined} size="sm" variant="outline" label="Copy" className="h-7 font-mono text-xs" />
+        <Button size="sm" variant={e.rating ? "outline" : "accent"} className="h-7 font-mono text-xs" onClick={() => setRatingOpen((o) => !o)}>
+          <Star className="h-3.5 w-3.5" /> {e.rating ? "Ubah rating" : "Nilai hasil"}
         </Button>
         <Button
           size="sm"
           variant="outline"
+          className="h-7 font-mono text-xs"
           onClick={() => {
             loadFromHistory(e.input, e.platform, e.variant);
             onRestored?.();
           }}
         >
-          <RotateCcw /> Muat
+          <RotateCcw className="h-3.5 w-3.5" /> Muat
         </Button>
-        <div className="ml-auto flex">
-          <Button size="icon-sm" variant="ghost" className="h-8 w-8" onClick={share} aria-label="Salin link share" title="Salin link share">
-            <Link2 className={cn(shareState === "copied" && "text-emerald-600")} />
+        <div className="ml-auto flex items-center gap-0.5">
+          <Button size="icon-sm" variant="ghost" className="h-7 w-7" onClick={share} aria-label="Salin link share" title="Salin link share">
+            <Link2 className={cn("h-3.5 w-3.5", shareState === "copied" && "text-emerald-500")} />
           </Button>
-          <Button size="icon-sm" variant="ghost" className="h-8 w-8" onClick={() => setTagDraft("")} aria-label="Tambah tag" title="Tambah tag">
-            <Tag />
+          <Button size="icon-sm" variant="ghost" className="h-7 w-7" onClick={() => setTagDraft("")} aria-label="Tambah tag" title="Tambah tag">
+            <Tag className="h-3.5 w-3.5" />
           </Button>
-          <Button size="icon-sm" variant="ghost" className="h-8 w-8" onClick={() => togglePin(e.id)} aria-label={e.pinned ? "Lepas pin" : "Pin"} title={e.pinned ? "Lepas pin" : "Pin"}>
-            {e.pinned ? <PinOff /> : <Pin />}
+          <Button size="icon-sm" variant="ghost" className="h-7 w-7" onClick={() => togglePin(e.id)} aria-label={e.pinned ? "Lepas pin" : "Pin"} title={e.pinned ? "Lepas pin" : "Pin"}>
+            {e.pinned ? <PinOff className="h-3.5 w-3.5 text-accent-strong" /> : <Pin className="h-3.5 w-3.5" />}
           </Button>
-          <Button size="icon-sm" variant="ghost" className="h-8 w-8" onClick={() => remove(e.id)} aria-label="Hapus entri" title="Hapus">
-            <Trash2 />
+          <Button size="icon-sm" variant="ghost" className="h-7 w-7" onClick={() => remove(e.id)} aria-label="Hapus entri" title="Hapus">
+            <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
           </Button>
         </div>
       </div>
       {shareState !== "idle" && (
-        <p className="mt-1 text-[11px] text-muted-foreground" role="status">
-          {shareState === "copied" ? "Link tersalin — isi form ada di dalam link, tidak di server mana pun." : "Gagal menyalin link."}
+        <p className="mt-1 font-mono text-[10.5px] text-muted-foreground" role="status">
+          {shareState === "copied" ? "Link tersalin — parameter tersimpan di dalam URL." : "Gagal menyalin link."}
         </p>
       )}
     </li>
@@ -219,15 +222,15 @@ export function HistoryPanel({ onRestored }: { onRestored?: () => void }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Cari judul, isi prompt, tag…"
-            className="h-8 w-full rounded-md border border-input bg-card pl-8 pr-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-7 w-full rounded-xs border border-input bg-card pl-8 pr-2 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             aria-label="Cari riwayat"
           />
         </div>
-        <Button size="icon-sm" variant="outline" className="h-8 w-8" onClick={doExport} disabled={!entries.length} aria-label="Ekspor JSON" title="Ekspor JSON">
-          <Download />
+        <Button size="icon-sm" variant="outline" className="h-7 w-7" onClick={doExport} disabled={!entries.length} aria-label="Ekspor JSON" title="Ekspor JSON">
+          <Download className="h-3.5 w-3.5" />
         </Button>
-        <Button size="icon-sm" variant="outline" className="h-8 w-8" onClick={() => fileRef.current?.click()} aria-label="Impor JSON" title="Impor JSON">
-          <Upload />
+        <Button size="icon-sm" variant="outline" className="h-7 w-7" onClick={() => fileRef.current?.click()} aria-label="Impor JSON" title="Impor JSON">
+          <Upload className="h-3.5 w-3.5" />
         </Button>
         <input
           ref={fileRef}
@@ -242,6 +245,7 @@ export function HistoryPanel({ onRestored }: { onRestored?: () => void }) {
         />
       </div>
 
+      {/* Zero-Pill Filter Tabs */}
       <div className="flex flex-wrap gap-1">
         {FILTERS.map((f) => (
           <button
@@ -250,8 +254,10 @@ export function HistoryPanel({ onRestored }: { onRestored?: () => void }) {
             onClick={() => setFilter(f.id)}
             aria-pressed={filter === f.id}
             className={cn(
-              "rounded-full border px-2.5 py-0.5 text-[11px]",
-              filter === f.id ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted",
+              "rounded-xs border px-2 py-0.5 font-mono text-[11px] font-medium transition-all active:translate-y-px",
+              filter === f.id
+                ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                : "border-border/80 bg-card text-foreground hover:bg-muted/80",
             )}
           >
             {f.label}
@@ -260,26 +266,29 @@ export function HistoryPanel({ onRestored }: { onRestored?: () => void }) {
       </div>
 
       {notice && (
-        <p className="text-xs text-accent-strong" role="status">
+        <p className="text-xs font-mono text-accent-strong" role="status">
           {notice}
         </p>
       )}
 
       {unrated > 0 && entries.length > 0 && (
-        <p className="rounded-md bg-accent/15 px-2.5 py-1.5 text-[11px] leading-snug">
-          {unrated} prompt belum dinilai. Setelah mencobanya di Suno/Udio, beri bintang — rating inilah yang membuat tab Insight dan saran
-          belajar dari hasilmu.
-        </p>
+        <div className="rounded-xs border border-accent/30 bg-accent/10 px-2.5 py-1.5 font-mono text-[11px] leading-snug text-foreground">
+          {unrated} prompt belum dinilai. Setelah mencoba di Suno/Udio, beri rating bintang agar tab Insight mempelajari deskriptor yang benar-benar berhasil.
+        </div>
       )}
 
       {!entries.length ? (
-        <div className="flex flex-col items-center gap-2 py-10 text-center">
-          <History className="h-6 w-6 text-muted-foreground/60" />
-          <p className="text-sm text-muted-foreground">Belum ada riwayat.</p>
-          <p className="max-w-60 text-xs text-muted-foreground">Prompt tersimpan otomatis setiap kali kamu menekan Copy.</p>
+        <div className="flex flex-col items-center gap-2 py-8 text-center">
+          <History className="h-6 w-6 text-muted-foreground/50" />
+          <p className="font-mono text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Belum Ada Riwayat
+          </p>
+          <p className="max-w-60 text-xs text-muted-foreground">
+            Prompt tersimpan otomatis setiap kali kamu menekan Copy.
+          </p>
         </div>
       ) : !visible.length ? (
-        <p className="py-6 text-center text-xs text-muted-foreground">Tidak ada yang cocok.</p>
+        <p className="py-6 text-center font-mono text-xs text-muted-foreground">Tidak ada prompt yang cocok.</p>
       ) : (
         <ul className="space-y-2">
           {visible.map((e) => (
@@ -289,20 +298,20 @@ export function HistoryPanel({ onRestored }: { onRestored?: () => void }) {
       )}
 
       {entries.length > 0 && (
-        <div className="flex items-center justify-between pt-1">
-          <span className="text-[11px] text-muted-foreground">{entries.length} prompt · tersimpan di browser ini</span>
+        <div className="flex items-center justify-between border-t border-border/40 pt-2">
+          <span className="font-mono text-[10.5px] text-muted-foreground">{entries.length} prompt tersimpan</span>
           {confirmClear ? (
             <div className="flex gap-1">
-              <Button size="sm" variant="destructive" onClick={() => { clear(); setConfirmClear(false); }}>
+              <Button size="sm" variant="destructive" className="h-6 px-2 text-[11px] font-mono" onClick={() => { clear(); setConfirmClear(false); }}>
                 Hapus (kecuali dipin)
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setConfirmClear(false)}>
+              <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px] font-mono" onClick={() => setConfirmClear(false)}>
                 Batal
               </Button>
             </div>
           ) : (
-            <Button size="sm" variant="ghost" onClick={() => setConfirmClear(true)}>
-              <Trash2 /> Bersihkan
+            <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px] font-mono text-muted-foreground hover:text-destructive" onClick={() => setConfirmClear(true)}>
+              <Trash2 className="h-3 w-3" /> Bersihkan
             </Button>
           )}
         </div>

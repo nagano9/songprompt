@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generatePrompt, buildLyrics } from "./generator";
+import { generatePrompt, buildLyrics, smartTrim } from "./generator";
 import { makeStructure, withDefaults } from "./defaults";
 import { resolveProfile } from "./platforms";
 import { TEMPLATES } from "./templates";
@@ -92,3 +92,45 @@ describe("templates", () => {
     expect(specificityScore(withDefaults(t.input)).score).toBeGreaterThanOrEqual(80);
   });
 });
+
+describe("1000-character limit and output settings", () => {
+  it("defaults Udio prompt limit to 1000 characters", () => {
+    const out = generatePrompt(base, "udio", "standard");
+    const promptField = out.fields.find((f) => f.key === "prompt");
+    expect(promptField?.limit).toBe(1000);
+    expect(promptField?.content.length).toBeLessThanOrEqual(1000);
+  });
+
+  it("defaults Generic music brief limit to 1000 characters", () => {
+    const out = generatePrompt(base, "generic", "compact");
+    const briefField = out.fields.find((f) => f.key === "brief");
+    expect(briefField?.limit).toBe(1000);
+    expect(briefField?.content.length).toBeLessThanOrEqual(1000);
+  });
+
+  it("smartTrim trims cleanly without splitting words when exceeding limit", () => {
+    const longText = "indie folk, quiet tenderness, acoustic guitar, felt piano, tape saturation, warm analog master, gentle vocal delivery, nostalgic longing, bittersweet feeling, lo-fi drum machine, vintage compression";
+    const trimmed = smartTrim(longText, 60);
+    expect(trimmed.length).toBeLessThanOrEqual(60);
+    expect(trimmed).not.toMatch(/[,;\s]$/);
+  });
+
+  it("enforces autoTrim option when prompt exceeds maxPromptLength", () => {
+    const veryLongInput = withDefaults({
+      genre: "progressive post-rock symphonic fusion",
+      subgenres: ["cinematic post-rock", "ambient math rock", "neo-classical crescendo", "modern orchestral drone"],
+      moods: ["overwhelming awe", "existential contemplation", "transcendent euphoria", "melancholic grandeur"],
+      instrumentsInclude: ["grand piano", "chamber cellos", "distorted electric guitar", "modular synthesizer", "glockenspiel", "timpani", "brass ensemble"],
+    });
+
+    const out = generatePrompt(veryLongInput, "suno", "detailed", resolveProfile("suno"), {
+      autoTrim: true,
+      maxPromptLength: 200,
+    });
+
+    const styleField = out.fields.find((f) => f.key === "style");
+    expect(styleField).toBeDefined();
+    expect(styleField!.content.length).toBeLessThanOrEqual(200);
+  });
+});
+
